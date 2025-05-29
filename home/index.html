@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monsta - Home</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+    }
+    .welcome-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .welcome-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .welcome-box h1 {
+      margin-bottom: 10px;
+    }
+    .welcome-box button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    .feed {
+      padding: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div id="welcome" class="welcome-modal" style="display: none;">
+    <div class="welcome-box">
+      <h1>Welcome to Monsta!</h1>
+      <p>Your account is ready. Start exploring your feed, post your story, and connect with others.</p>
+      <button onclick="dismissWelcome()">Got it</button>
+    </div>
+  </div>
+
+  <div class="feed">
+    <h2>Monsta Feed</h2>
+    <p>This is your homepage. You'll see posts from people you follow, stories, and more.</p>
+    <!-- Feed content will go here -->
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "../index.html";
+      } else {
+        const firstLogin = localStorage.getItem("monsta-welcomed") !== "yes";
+        if (firstLogin) {
+          document.getElementById("welcome").style.display = "flex";
+        }
+      }
+    });
+
+    window.dismissWelcome = function() {
+      document.getElementById("welcome").style.display = "none";
+      localStorage.setItem("monsta-welcomed", "yes");
+    };
+  </script>
+</body>
+</html>
