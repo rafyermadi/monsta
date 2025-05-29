@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simple Social Media</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
+    .container { max-width: 400px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
+    h2 { text-align: center; }
+    input, button { width: 100%; margin: 10px 0; padding: 10px; }
+    footer { margin-top: 40px; text-align: center; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Sign Up</h2>
+    <input type="email" id="signupEmail" placeholder="Email" />
+    <input type="password" id="signupPassword" placeholder="Password" />
+    <input type="text" id="signupUsername" placeholder="Username" />
+    <input type="date" id="signupBirthdate" placeholder="Birthdate" />
+    <button onclick="signup()">Sign Up</button>
+
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button onclick="login()">Login</button>
+
+    <h2>Forgot Password</h2>
+    <input type="email" id="forgotEmail" placeholder="Your Email" />
+    <button onclick="forgotPassword()">Reset Password</button>
+  </div>
+
+  <footer>
+    <p>Made with ❤️ by <a href="https://www.instagram.com/rafy.rayyan/" target="_blank">Rafy Rayyan</a></p>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      doc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUJZmbd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    async function signup() {
+      const email = document.getElementById("signupEmail").value;
+      const password = document.getElementById("signupPassword").value;
+      const username = document.getElementById("signupUsername").value;
+      const birthdate = document.getElementById("signupBirthdate").value;
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        alert("Username already taken!");
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: email,
+        username: username,
+        birthdate: birthdate,
+        createdAt: new Date()
+      });
+
+      alert("Welcome " + username + "! Your account is created.");
+    }
+
+    async function login() {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("Login successful!");
+    }
+
+    async function forgotPassword() {
+      const email = document.getElementById("forgotEmail").value;
+      await sendPasswordResetEmail(auth, email);
+      alert("Password reset email sent!");
+    }
+  </script>
+</body>
+</html>
