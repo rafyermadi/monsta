@@ -69,44 +69,56 @@
     const db = getFirestore();
 
     async function signup() {
-      const email = document.getElementById("signupEmail").value;
-      const password = document.getElementById("signupPassword").value;
-      const username = document.getElementById("signupUsername").value;
-      const birthdate = document.getElementById("signupBirthdate").value;
+      try {
+        const email = document.getElementById("signupEmail").value;
+        const password = document.getElementById("signupPassword").value;
+        const username = document.getElementById("signupUsername").value;
+        const birthdate = document.getElementById("signupBirthdate").value;
 
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("username", "==", username));
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        alert("Username already taken!");
-        return;
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("username", "==", username));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          alert("Username already taken!");
+          return;
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          email: email,
+          username: username,
+          birthdate: birthdate,
+          createdAt: new Date()
+        });
+
+        alert("Welcome " + username + "! Your account is created.");
+      } catch (error) {
+        alert("Sign Up Error: " + error.message);
       }
-
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        email: email,
-        username: username,
-        birthdate: birthdate,
-        createdAt: new Date()
-      });
-
-      alert("Welcome " + username + "! Your account is created.");
     }
 
     async function login() {
-      const email = document.getElementById("loginEmail").value;
-      const password = document.getElementById("loginPassword").value;
-      await signInWithEmailAndPassword(auth, email, password);
-      alert("Login successful!");
+      try {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Login successful!");
+      } catch (error) {
+        alert("Login Error: " + error.message);
+      }
     }
 
     async function forgotPassword() {
-      const email = document.getElementById("forgotEmail").value;
-      await sendPasswordResetEmail(auth, email);
-      alert("Password reset email sent!");
+      try {
+        const email = document.getElementById("forgotEmail").value;
+        await sendPasswordResetEmail(auth, email);
+        alert("Password reset email sent!");
+      } catch (error) {
+        alert("Reset Error: " + error.message);
+      }
     }
   </script>
 </body>
