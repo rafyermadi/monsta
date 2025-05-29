@@ -19,16 +19,16 @@
     <input type="password" id="signupPassword" placeholder="Password" />
     <input type="text" id="signupUsername" placeholder="Username" />
     <input type="date" id="signupBirthdate" placeholder="Birthdate" />
-    <button onclick="signup()">Sign Up</button>
+    <button id="signupBtn">Sign Up</button>
 
     <h2>Login</h2>
     <input type="email" id="loginEmail" placeholder="Email" />
     <input type="password" id="loginPassword" placeholder="Password" />
-    <button onclick="login()">Login</button>
+    <button id="loginBtn">Login</button>
 
     <h2>Forgot Password</h2>
     <input type="email" id="forgotEmail" placeholder="Your Email" />
-    <button onclick="forgotPassword()">Reset Password</button>
+    <button id="forgotBtn">Reset Password</button>
   </div>
 
   <footer>
@@ -120,6 +120,11 @@
         alert("Reset Error: " + error.message);
       }
     }
+
+    // Bind buttons to their functions
+    document.getElementById("signupBtn").addEventListener("click", signup);
+    document.getElementById("loginBtn").addEventListener("click", login);
+    document.getElementById("forgotBtn").addEventListener("click", forgotPassword);
   </script>
 </body>
 </html>
