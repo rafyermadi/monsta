@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simple Social Media</title>
+  <title>Monsta - Login</title>
   <style>
     body { font-family: sans-serif; background-color: #f0f0f0; margin: 0; padding: 20px; }
     .container { max-width: 400px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
@@ -19,16 +19,16 @@
     <input type="password" id="signupPassword" placeholder="Password" />
     <input type="text" id="signupUsername" placeholder="Username" />
     <input type="date" id="signupBirthdate" placeholder="Birthdate" />
-    <button id="signupBtn">Sign Up</button>
+    <button onclick="signup()">Sign Up</button>
 
     <h2>Login</h2>
     <input type="email" id="loginEmail" placeholder="Email" />
     <input type="password" id="loginPassword" placeholder="Password" />
-    <button id="loginBtn">Login</button>
+    <button onclick="login()">Login</button>
 
     <h2>Forgot Password</h2>
     <input type="email" id="forgotEmail" placeholder="Your Email" />
-    <button id="forgotBtn">Reset Password</button>
+    <button onclick="forgotPassword()">Reset Password</button>
   </div>
 
   <footer>
@@ -41,7 +41,8 @@
       getAuth,
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
-      sendPasswordResetEmail
+      sendPasswordResetEmail,
+      onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
 
     import {
@@ -58,7 +59,7 @@
       apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
       authDomain: "simplesocialmedia-4f908.firebaseapp.com",
       projectId: "simplesocialmedia-4f908",
-      storageBucket: "simplesocialmedia-4f908.firebasestorage.app",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
       messagingSenderId: "770461702761",
       appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
     };
@@ -67,64 +68,54 @@
     const auth = getAuth();
     const db = getFirestore();
 
-    async function signup() {
-      try {
-        const email = document.getElementById("signupEmail").value;
-        const password = document.getElementById("signupPassword").value;
-        const username = document.getElementById("signupUsername").value;
-        const birthdate = document.getElementById("signupBirthdate").value;
-
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("username", "==", username));
-        const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
-          alert("Username already taken!");
-          return;
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          email: email,
-          username: username,
-          birthdate: birthdate,
-          createdAt: new Date()
-        });
-
-        alert("Welcome " + username + "! Your account is created. Please login.");
-        window.scrollTo({ top: document.getElementById("loginEmail").offsetTop, behavior: "smooth" });
-      } catch (error) {
-        alert("Sign Up Error: " + error.message);
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "home/";
       }
+    });
+
+    async function signup() {
+      const email = document.getElementById("signupEmail").value;
+      const password = document.getElementById("signupPassword").value;
+      const username = document.getElementById("signupUsername").value;
+      const birthdate = document.getElementById("signupBirthdate").value;
+
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        alert("Username already taken!");
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: email,
+        username: username,
+        birthdate: birthdate,
+        createdAt: new Date()
+      });
+
+      alert("Welcome " + username + "! Your account is created. Please login.");
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
     }
 
     async function login() {
-      try {
-        const email = document.getElementById("loginEmail").value;
-        const password = document.getElementById("loginPassword").value;
-        await signInWithEmailAndPassword(auth, email, password);
-        alert("Login successful! Redirecting to your home page...");
-        window.location.href = "home.html"; // Ganti nanti dengan halaman beranda
-      } catch (error) {
-        alert("Login Error: " + error.message);
-      }
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("Login successful! Redirecting to your home page...");
+      window.location.href = "home/";
     }
 
     async function forgotPassword() {
-      try {
-        const email = document.getElementById("forgotEmail").value;
-        await sendPasswordResetEmail(auth, email);
-        alert("Password reset email sent!");
-      } catch (error) {
-        alert("Reset Error: " + error.message);
-      }
+      const email = document.getElementById("forgotEmail").value;
+      await sendPasswordResetEmail(auth, email);
+      alert("Password reset email sent!");
     }
-
-    document.getElementById("signupBtn").addEventListener("click", signup);
-    document.getElementById("loginBtn").addEventListener("click", login);
-    document.getElementById("forgotBtn").addEventListener("click", forgotPassword);
   </script>
 </body>
 </html>
