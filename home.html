@@ -44,6 +44,29 @@
       background-color: #0056b3;
     }
   </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+
+    // Jika user sudah login sebelumnya, langsung redirect ke feed.html
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "feed.html";
+      }
+    });
+  </script>
 </head>
 <body>
   <div class="welcome-box">
@@ -53,4 +76,3 @@
   </div>
 </body>
 </html>
-
