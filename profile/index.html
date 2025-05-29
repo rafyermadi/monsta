@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monsta - Profile</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f7f7f7;
+    }
+    header {
+      background-color: #fff;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #ccc;
+    }
+    .profile-section input, .profile-section textarea {
+      display: block;
+      width: 100%;
+      padding: 0.6rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    .profile-section button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 1rem 0;
+    }
+    .stat-box {
+      text-align: center;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Monsta Profile</h2>
+    <button onclick="logout()">Logout</button>
+  </header>
+  <div class="container">
+    <div class="profile-section">
+      <div style="text-align:center">
+        <img id="profilePic" class="profile-pic" src="default-avatar.png" alt="Profile Picture">
+        <input type="file" id="uploadPic" accept="image/*">
+      </div>
+      <input type="text" id="username" placeholder="Username" disabled />
+      <input type="text" id="name" placeholder="Full Name" />
+      <textarea id="bio" rows="3" placeholder="Bio"></textarea>
+      <input type="url" id="link" placeholder="Link (e.g. https://...)" />
+      <div class="stats">
+        <div class="stat-box">
+          <strong id="postCount">0</strong><br>Posts
+        </div>
+        <div class="stat-box">
+          <strong id="followersCount">0</strong><br>Followers
+        </div>
+        <div class="stat-box">
+          <strong id="followingCount">0</strong><br>Following
+        </div>
+      </div>
+      <button onclick="saveProfile()">Save Changes</button>
+    </div>
+  </div>
+  <footer>
+    Made with ❤️ by <a href="https://www.instagram.com/rafy.rayyan/" target="_blank">Rafy Rayyan</a>
+  </footer>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc
+    } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    const usernameInput = document.getElementById("username");
+    const nameInput = document.getElementById("name");
+    const bioInput = document.getElementById("bio");
+    const linkInput = document.getElementById("link");
+
+    let currentUser;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          usernameInput.value = data.username || "";
+          nameInput.value = data.name || "";
+          bioInput.value = data.bio || "";
+          linkInput.value = data.link || "";
+        }
+      } else {
+        window.location.href = "../index.html";
+      }
+    });
+
+    async function saveProfile() {
+      if (!currentUser) return;
+      const ref = doc(db, "users", currentUser.uid);
+      await updateDoc(ref, {
+        name: nameInput.value,
+        bio: bioInput.value,
+        link: linkInput.value
+      });
+      alert("Profile updated successfully.");
+    }
+
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "../index.html";
+      });
+    }
+  </script>
+</body>
+</html>
