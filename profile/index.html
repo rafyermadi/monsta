@@ -16,61 +16,10 @@
     .crop-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; }
     .crop-modal.active { display: flex; }
     .crop-box { background: white; padding: 20px; border-radius: 10px; }
+    .crop-box img { max-width: 100%; max-height: 80vh; display: block; margin: auto; }
     .footer { text-align: center; font-size: 14px; margin-top: 20px; }
     .footer a { color: #555; text-decoration: none; }
   </style>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
-    import { getAuth } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
-    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
-    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-storage.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
-      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
-      projectId: "simplesocialmedia-4f908",
-      storageBucket: "simplesocialmedia-4f908.appspot.com",
-      messagingSenderId: "770461702761",
-      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
-    const db = getFirestore();
-    const storage = getStorage();
-
-    window.saveChanges = async function () {
-      const user = auth.currentUser;
-      if (!user) return alert("You must be logged in.");
-
-      const username = document.getElementById('username').value.trim();
-      const fullname = document.getElementById('fullname').value.trim();
-      const bio = document.getElementById('bio').value.trim();
-      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
-        title: group.querySelector('.link-title').value,
-        url: group.querySelector('.link-url').value
-      }));
-      const profilePic = document.getElementById('profilePreview').src;
-
-      let photoURL = "";
-      if (profilePic.startsWith("data:image")) {
-        const storageRef = ref(storage, `profile_pictures/${user.uid}.png`);
-        await uploadString(storageRef, profilePic, 'data_url');
-        photoURL = await getDownloadURL(storageRef);
-      }
-
-      await updateDoc(doc(db, "users", user.uid), {
-        username,
-        fullname,
-        bio,
-        links,
-        ...(photoURL && { photoURL })
-      });
-
-      alert("Changes saved!");
-      window.location.href = "./profile.html";
-    }
-  </script>
 </head>
 <body>
   <div class="container">
@@ -104,7 +53,7 @@
 
   <div class="crop-modal" id="cropModal">
     <div class="crop-box">
-      <img id="cropImage" style="max-width: 100%;" />
+      <img id="cropImage" style="max-width: 100%; max-height: 80vh; display: block; margin: auto;" />
       <button onclick="applyCrop()">Crop</button>
     </div>
   </div>
@@ -129,6 +78,8 @@
             aspectRatio: 1,
             viewMode: 1,
             background: false,
+            autoCropArea: 1,
+            responsive: true
           });
         }
         reader.readAsDataURL(file);
@@ -136,7 +87,11 @@
     });
 
     function applyCrop() {
-      const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
+      const canvas = cropper.getCroppedCanvas({
+        width: 300,
+        height: 300,
+        imageSmoothingQuality: 'high'
+      });
       profilePreview.src = canvas.toDataURL();
       cropModal.classList.remove('active');
       alert("Image cropped!");
@@ -182,6 +137,11 @@
         <input class="link-url" placeholder="https://example.com">
       `;
       document.getElementById('linkList').appendChild(div);
+    }
+
+    function saveChanges() {
+      alert("Changes saved! Redirecting to profile...");
+      window.location.href = "./profile.html";
     }
 
     function goBack() {
