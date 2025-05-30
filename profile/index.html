@@ -6,7 +6,9 @@
   <title>Monsta Profile</title>
   <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" />
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <style>
     body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
     .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
@@ -54,7 +56,7 @@
 
   <div class="crop-modal" id="cropModal">
     <div class="crop-box">
-      <img id="cropImage" style="max-width: 100%; max-height: 400px;" />
+      <img id="cropImage" style="max-width: 100%;" />
       <button onclick="applyCrop()">Crop</button>
     </div>
   </div>
@@ -65,18 +67,47 @@
       apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
       authDomain: "simplesocialmedia-4f908.firebaseapp.com",
       projectId: "simplesocialmedia-4f908",
-      storageBucket: "simplesocialmedia-4f908.firebasestorage.app",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
       messagingSenderId: "770461702761",
       appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    let currentUser = null;
+    auth.onAuthStateChanged(user => {
+      if (!user) return;
+      currentUser = user;
+      db.collection("users").doc(user.uid).get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById('username').value = data.username || "";
+          document.getElementById('fullname').value = data.fullname || "";
+          document.getElementById('bio').value = data.bio || "";
+          document.getElementById('bioCount').textContent = `${data.bio?.length || 0} / 200`;
+          if (data.links) {
+            const container = document.getElementById('linkList');
+            container.innerHTML = "";
+            data.links.forEach(link => {
+              const div = document.createElement('div');
+              div.className = 'link-group';
+              div.innerHTML = `<input class="link-title" value="${link.title}" placeholder="Link Title"> <input class="link-url" value="${link.url}" placeholder="https://example.com">`;
+              container.appendChild(div);
+            });
+          }
+          if (data.photoURL) document.getElementById('profilePreview').src = data.photoURL;
+        }
+      });
+    });
 
     let cropper;
     const profileImage = document.getElementById('profileImage');
     const cropImage = document.getElementById('cropImage');
     const cropModal = document.getElementById('cropModal');
     const profilePreview = document.getElementById('profilePreview');
+    let croppedBlob = null;
 
     profileImage.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -98,7 +129,10 @@
 
     function applyCrop() {
       const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
-      profilePreview.src = canvas.toDataURL();
+      canvas.toBlob(blob => {
+        croppedBlob = blob;
+        profilePreview.src = URL.createObjectURL(blob);
+      }, 'image/png');
       cropModal.classList.remove('active');
       alert("Image cropped!");
     }
@@ -115,15 +149,16 @@
         status.textContent = "Checking availability...";
         status.style.color = "#888";
         setTimeout(() => {
-          const taken = ["rafyrayyan", "admin", "test"];
-          if (taken.includes(value.toLowerCase())) {
-            status.textContent = "Username already taken.";
-            status.style.color = "red";
-          } else {
-            status.textContent = "Username is available.";
-            status.style.color = "green";
-          }
-        }, 500);
+          db.collection("users").where("username", "==", value).get().then(snapshot => {
+            if (!snapshot.empty && snapshot.docs[0].id !== currentUser?.uid) {
+              status.textContent = "Username already taken.";
+              status.style.color = "red";
+            } else {
+              status.textContent = "Username is available.";
+              status.style.color = "green";
+            }
+          });
+        }, 300);
       }
     });
 
@@ -138,14 +173,12 @@
       if (links.length >= 5) return alert("Max 5 links allowed.");
       const div = document.createElement('div');
       div.className = 'link-group';
-      div.innerHTML = `
-        <input class="link-title" placeholder="Link Title">
-        <input class="link-url" placeholder="https://example.com">
-      `;
+      div.innerHTML = `<input class="link-title" placeholder="Link Title"> <input class="link-url" placeholder="https://example.com">`;
       document.getElementById('linkList').appendChild(div);
     }
 
     function saveChanges() {
+      if (!currentUser) return alert("Not signed in");
       const username = document.getElementById('username').value.trim();
       const fullname = document.getElementById('fullname').value;
       const bio = document.getElementById('bio').value;
@@ -154,23 +187,21 @@
         url: group.querySelector('.link-url').value
       }));
 
-      if (!username) {
-        alert("Username is required.");
-        return;
-      }
+      const saveData = (photoURL = "") => {
+        db.collection("users").doc(currentUser.uid).set({
+          username, fullname, bio, links, photoURL
+        }, { merge: true }).then(() => {
+          alert("Changes saved! Redirecting to profile...");
+          window.location.href = "./profile.html";
+        });
+      };
 
-      db.collection("users").doc(username).set({
-        username,
-        fullname,
-        bio,
-        links
-      }).then(() => {
-        alert("Changes saved! Redirecting to profile...");
-        window.location.href = "./profile.html";
-      }).catch(err => {
-        console.error("Error saving profile:", err);
-        alert("Failed to save profile.");
-      });
+      if (croppedBlob) {
+        const ref = storage.ref().child(`avatars/${currentUser.uid}.png`);
+        ref.put(croppedBlob).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveData(url));
+      } else {
+        saveData();
+      }
     }
 
     function goBack() {
