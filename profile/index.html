@@ -4,192 +4,189 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Monsta Profile</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.css" />
   <style>
-    body {
-      font-family: sans-serif;
-      background-color: #f9f9f9;
-      margin: 0;
-      padding: 20px;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      text-align: center;
-    }
-    input, textarea, button {
-      width: 100%;
-      margin: 10px 0;
-      padding: 10px;
-      box-sizing: border-box;
-    }
-    .link-pair {
-      display: flex;
-      gap: 10px;
-    }
-    .link-pair input {
-      flex: 1;
-    }
-    .counter {
-      text-align: right;
-      font-size: 12px;
-      color: gray;
-    }
-    #cropModal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    #cropContainer {
-      background: white;
-      padding: 10px;
-      border-radius: 8px;
-      text-align: center;
-    }
-    #cropImage {
-      max-width: 300px;
-      max-height: 300px;
-    }
-    .warning {
-      color: red;
-      font-size: 12px;
-    }
-    .footer {
-      text-align: center;
-      font-size: 14px;
-      margin-top: 20px;
-    }
-    .footer a {
-      color: #555;
-      text-decoration: none;
-    }
+    body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
+    .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+    h1 { text-align: center; }
+    input, textarea, button { width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+    .username-valid { font-size: 0.9rem; margin-top: -8px; margin-bottom: 8px; }
+    .link-group { display: flex; gap: 10px; margin-bottom: 10px; }
+    #profilePreview { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; margin: auto; margin-bottom: 10px; }
+    .crop-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; }
+    .crop-modal.active { display: flex; }
+    .crop-box { background: white; padding: 20px; border-radius: 10px; }
+    .footer { text-align: center; font-size: 14px; margin-top: 20px; }
+    .footer a { color: #555; text-decoration: none; }
   </style>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getAuth } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+    const storage = getStorage();
+
+    window.saveChanges = async function () {
+      const user = auth.currentUser;
+      if (!user) return alert("You must be logged in.");
+
+      const username = document.getElementById('username').value.trim();
+      const fullname = document.getElementById('fullname').value.trim();
+      const bio = document.getElementById('bio').value.trim();
+      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
+        title: group.querySelector('.link-title').value,
+        url: group.querySelector('.link-url').value
+      }));
+      const profilePic = document.getElementById('profilePreview').src;
+
+      let photoURL = "";
+      if (profilePic.startsWith("data:image")) {
+        const storageRef = ref(storage, `profile_pictures/${user.uid}.png`);
+        await uploadString(storageRef, profilePic, 'data_url');
+        photoURL = await getDownloadURL(storageRef);
+      }
+
+      await updateDoc(doc(db, "users", user.uid), {
+        username,
+        fullname,
+        bio,
+        links,
+        ...(photoURL && { photoURL })
+      });
+
+      alert("Changes saved!");
+      window.location.href = "./profile.html";
+    }
+  </script>
 </head>
 <body>
   <div class="container">
     <h1>Monsta Profile</h1>
-    <img id="profilePreview" src="" alt="Profile Picture" style="width:100px;height:100px;border-radius:50%;display:block;margin:auto" />
-    <input type="file" id="fileInput" accept="image/*" />
-    <div id="cropModal">
-      <div id="cropContainer">
-        <img id="cropImage" />
-        <br />
-        <button id="cropBtn">Crop</button>
-      </div>
-    </div>
+    <img id="profilePreview" src="" alt="Profile Picture">
+    <input type="file" id="profileImage" accept="image/*">
 
-    <input id="username" placeholder="Username" maxlength="30" />
-    <div id="usernameWarning" class="warning"></div>
+    <input id="username" placeholder="Username (3-30 chars, a-z, 0-9, ., _, emoji)" maxlength="30" />
+    <div class="username-valid" id="usernameStatus"></div>
 
-    <input id="fullname" placeholder="Full Name (max 30 characters)" maxlength="30" />
+    <input id="fullname" placeholder="Full Name (max 30 characters)" maxlength="30">
 
     <textarea id="bio" placeholder="Bio (max 200 characters)" maxlength="200"></textarea>
-    <div id="bioCount" class="counter">0 / 200</div>
+    <div style="text-align:right; font-size: 0.9rem;" id="bioCount">0 / 200</div>
 
-    <div id="links">
-      <div class="link-pair">
-        <input placeholder="Link Title" />
-        <input placeholder="https://example.com" />
+    <div id="linkList">
+      <div class="link-group">
+        <input class="link-title" placeholder="Link Title">
+        <input class="link-url" placeholder="https://example.com">
       </div>
     </div>
     <button onclick="addLink()">+ Add Another Link</button>
 
-    <button onclick="saveChanges()">Save Changes</button>
-    <button onclick="window.location.href='profile-view.html'">Cancel</button>
+    <button onclick="saveChanges()" style="background:#007bff; color:white">Save Changes</button>
+    <button onclick="goBack()">Cancel</button>
 
     <div class="footer">
       Made with ❤️ by <a href="https://www.instagram.com/rafy.rayyan/" target="_blank">Rafy Rayyan</a>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+  <div class="crop-modal" id="cropModal">
+    <div class="crop-box">
+      <img id="cropImage" style="max-width: 100%;" />
+      <button onclick="applyCrop()">Crop</button>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/cropperjs@1.5.13/dist/cropper.min.js"></script>
   <script>
-    const usernameInput = document.getElementById("username");
-    const usernameWarning = document.getElementById("usernameWarning");
-    const bioInput = document.getElementById("bio");
-    const bioCount = document.getElementById("bioCount");
-    const linksContainer = document.getElementById("links");
-    const profilePreview = document.getElementById("profilePreview");
-
     let cropper;
+    const profileImage = document.getElementById('profileImage');
+    const cropImage = document.getElementById('cropImage');
+    const cropModal = document.getElementById('cropModal');
+    const profilePreview = document.getElementById('profilePreview');
 
-    bioInput.addEventListener("input", () => {
-      bioCount.textContent = `${bioInput.value.length} / 200`;
-    });
-
-    usernameInput.addEventListener("input", () => {
-      const val = usernameInput.value;
-      const valid = /^[a-z0-9_.\p{Emoji}]{3,30}$/u.test(val);
-      if (!valid) {
-        usernameWarning.textContent = "Username must be 3-30 lowercase characters, no spaces, only _ or . or emoji allowed.";
-      } else {
-        if (["taken", "used", "rafyrayyan"].includes(val)) {
-          usernameWarning.textContent = "Username already taken.";
-        } else {
-          usernameWarning.textContent = "✓ Username available";
+    profileImage.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          cropImage.src = reader.result;
+          cropModal.classList.add('active');
+          if (cropper) cropper.destroy();
+          cropper = new Cropper(cropImage, {
+            aspectRatio: 1,
+            viewMode: 1,
+            background: false,
+          });
         }
+        reader.readAsDataURL(file);
       }
     });
 
-    function addLink() {
-      if (linksContainer.children.length >= 5) return alert("Max 5 links");
-      const div = document.createElement("div");
-      div.className = "link-pair";
-      div.innerHTML = `
-        <input placeholder="Link Title" />
-        <input placeholder="https://example.com" />
-      `;
-      linksContainer.appendChild(div);
-    }
-
-    function saveChanges() {
-      alert("Changes saved!");
-      window.location.href = "profile-view.html";
-    }
-
-    const fileInput = document.getElementById("fileInput");
-    const cropModal = document.getElementById("cropModal");
-    const cropImage = document.getElementById("cropImage");
-    const cropBtn = document.getElementById("cropBtn");
-
-    fileInput.addEventListener("change", e => {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = () => {
-        cropImage.src = reader.result;
-        cropModal.style.display = "flex";
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-          dragMode: "move",
-          scalable: false,
-          zoomable: true
-        });
-      };
-      reader.readAsDataURL(file);
-    });
-
-    cropBtn.addEventListener("click", () => {
+    function applyCrop() {
       const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
-      const croppedData = canvas.toDataURL("image/png");
-      profilePreview.src = croppedData;
-      cropModal.style.display = "none";
-      cropper.destroy();
+      profilePreview.src = canvas.toDataURL();
+      cropModal.classList.remove('active');
       alert("Image cropped!");
+    }
+
+    const usernameInput = document.getElementById('username');
+    usernameInput.addEventListener('input', () => {
+      const value = usernameInput.value.trim();
+      const status = document.getElementById('usernameStatus');
+      const regex = /^[a-z0-9_.\p{Emoji}]{3,30}$/u;
+      if (!regex.test(value)) {
+        status.textContent = "Invalid username format.";
+        status.style.color = "red";
+      } else {
+        status.textContent = "Checking availability...";
+        status.style.color = "#888";
+        setTimeout(() => {
+          const taken = ["rafyrayyan", "admin", "test"];
+          if (taken.includes(value.toLowerCase())) {
+            status.textContent = "Username already taken.";
+            status.style.color = "red";
+          } else {
+            status.textContent = "Username is available.";
+            status.style.color = "green";
+          }
+        }, 1000);
+      }
     });
+
+    const bio = document.getElementById('bio');
+    const bioCount = document.getElementById('bioCount');
+    bio.addEventListener('input', () => {
+      bioCount.textContent = `${bio.value.length} / 200`;
+    });
+
+    function addLink() {
+      const links = document.querySelectorAll('.link-group');
+      if (links.length >= 5) return alert("Max 5 links allowed.");
+      const div = document.createElement('div');
+      div.className = 'link-group';
+      div.innerHTML = `
+        <input class="link-title" placeholder="Link Title">
+        <input class="link-url" placeholder="https://example.com">
+      `;
+      document.getElementById('linkList').appendChild(div);
+    }
+
+    function goBack() {
+      window.location.href = "./profile.html";
+    }
   </script>
 </body>
 </html>
