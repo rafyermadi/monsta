@@ -17,7 +17,7 @@
     #profilePreview { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; display: block; margin: auto; margin-bottom: 10px; }
     .crop-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 1000; }
     .crop-modal.active { display: flex; }
-    .crop-box { background: white; padding: 20px; border-radius: 10px; max-width: 95vw; max-height: 95vh; overflow: auto; }
+    .crop-box { background: white; padding: 20px; border-radius: 10px; }
     .footer { text-align: center; font-size: 14px; margin-top: 20px; }
     .footer a { color: #555; text-decoration: none; }
   </style>
@@ -54,7 +54,7 @@
 
   <div class="crop-modal" id="cropModal">
     <div class="crop-box">
-      <img id="cropImage" style="max-width: 100%; max-height: 70vh;" />
+      <img id="cropImage" style="max-width: 100%; max-height: 400px;" />
       <button onclick="applyCrop()">Crop</button>
     </div>
   </div>
@@ -146,13 +146,18 @@
     }
 
     function saveChanges() {
-      const username = document.getElementById('username').value;
+      const username = document.getElementById('username').value.trim();
       const fullname = document.getElementById('fullname').value;
       const bio = document.getElementById('bio').value;
       const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
         title: group.querySelector('.link-title').value,
         url: group.querySelector('.link-url').value
       }));
+
+      if (!username) {
+        alert("Username is required.");
+        return;
+      }
 
       db.collection("users").doc(username).set({
         username,
