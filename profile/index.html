@@ -4,159 +4,152 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Monsta Profile</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f8f8f8; margin: 0; padding: 0; }
+    body {
+      font-family: sans-serif;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 0;
+    }
     header {
-      background: white; padding: 15px 30px; font-weight: bold; font-size: 1.5rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
+      background-color: white;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .container {
-      max-width: 500px; margin: 30px auto; background: white; padding: 30px; border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center;
+      max-width: 500px;
+      margin: 40px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
     }
-    img#profile-preview {
-      width: 120px; height: 120px; object-fit: cover; border-radius: 50%; margin-bottom: 10px;
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
     }
-    input, textarea {
-      width: 100%; margin: 10px 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc;
+    .profile-pic {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 10px;
     }
-    .button-group { display: flex; justify-content: space-between; margin-top: 20px; }
-    button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; }
-    .save-btn { background-color: #007bff; color: white; }
-    .cancel-btn { background-color: #ccc; }
-    footer { text-align: center; margin-top: 50px; font-size: 14px; color: #666; }
-    .char-counter { font-size: 12px; text-align: right; color: gray; }
-    .link-input { display: flex; gap: 5px; margin-top: 5px; }
-    .link-input input { flex: 1; }
-    .error { color: red; font-size: 12px; text-align: left; }
+    #usernameFeedback {
+      color: red;
+      font-size: 0.9em;
+      margin-top: -5px;
+    }
+    #charCount {
+      text-align: right;
+      font-size: 12px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
   <header>
-    <span>Monsta Profile</span>
-    <button onclick="logout()">Logout</button>
+    Monsta Profile
+    <button style="float: right" onclick="logout()">Logout</button>
   </header>
 
   <div class="container">
-    <img id="profile-preview" src="https://via.placeholder.com/120" alt="Profile Picture" />
-    <input type="file" id="imageUpload" accept="image/*" />
-    <div id="crop-container" style="display:none">
-      <img id="crop-image" style="max-width: 100%; margin-top: 10px;" />
-      <button onclick="cropImage()">Crop & Save</button>
-    </div>
+    <img id="profilePic" src="#" alt="Profile Picture" class="profile-pic" />
+    <input type="file" accept="image/*" onchange="previewPic(event)" />
 
-    <input type="text" id="username" placeholder="Username" maxlength="30" />
-    <div id="username-error" class="error"></div>
-    <input type="text" id="fullname" placeholder="Full Name" maxlength="30" />
-    <textarea id="bio" placeholder="Bio (max 200 characters)" maxlength="200"></textarea>
-    <div id="bio-counter" class="char-counter">0 / 200</div>
+    <input type="text" id="username" placeholder="Username" maxlength="30" oninput="validateUsername()" />
+    <div id="usernameFeedback"></div>
+
+    <input type="text" id="fullName" placeholder="Full Name" maxlength="30" />
+
+    <textarea id="bio" placeholder="Bio (max 200 characters)" maxlength="200" oninput="countBioChars()"></textarea>
+    <div id="charCount">0 / 200</div>
 
     <div id="links">
-      <div class="link-input">
+      <div class="link-pair">
         <input type="text" placeholder="Link Title" class="link-title" />
         <input type="url" placeholder="https://example.com" class="link-url" />
       </div>
     </div>
     <button onclick="addLinkField()">+ Add Another Link</button>
 
-    <div class="button-group">
-      <button class="save-btn">Save Changes</button>
-      <button class="cancel-btn" onclick="window.location.href='profile.html'">Cancel</button>
-    </div>
+    <button onclick="saveChanges()">Save Changes</button>
+    <button onclick="window.location.href='profile.html'">Cancel</button>
 
-    <div style="margin-top:20px; display: flex; justify-content: space-around;">
-      <div><b>0</b><br>Posts</div>
-      <div><b>0</b><br>Followers</div>
-      <div><b>0</b><br>Following</div>
+    <div style="margin-top: 30px">
+      <strong>0</strong> Posts &nbsp;&nbsp;&nbsp;
+      <strong>0</strong> Followers &nbsp;&nbsp;&nbsp;
+      <strong>0</strong> Following
     </div>
   </div>
 
-  <footer>
-    Made with ❤️ by <a href="https://www.instagram.com/rafy.rayyan/" target="_blank">Rafy Rayyan</a>
-  </footer>
-
   <script>
-    let cropper;
-    const imageUpload = document.getElementById('imageUpload');
-    const cropContainer = document.getElementById('crop-container');
-    const cropImage = document.getElementById('crop-image');
-    const preview = document.getElementById('profile-preview');
-    const bio = document.getElementById('bio');
-    const bioCounter = document.getElementById('bio-counter');
-    const usernameInput = document.getElementById('username');
-    const usernameError = document.getElementById('username-error');
-
-    const linksContainer = document.getElementById('links');
-
-    function logout() {
-      alert('Logging out...');
+    function previewPic(event) {
+      const reader = new FileReader();
+      reader.onload = function () {
+        document.getElementById("profilePic").src = reader.result;
+      };
+      reader.readAsDataURL(event.target.files[0]);
     }
 
-    imageUpload.addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (!file) return;
+    function countBioChars() {
+      const bio = document.getElementById("bio");
+      document.getElementById("charCount").textContent = `${bio.value.length} / 200`;
+    }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        cropImage.src = reader.result;
-        cropContainer.style.display = 'block';
-        if (cropper) cropper.destroy();
-        cropper = new Cropper(cropImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-          movable: false,
-          zoomable: false,
-          scalable: false,
-          rotatable: false,
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+    async function validateUsername() {
+      const usernameInput = document.getElementById("username");
+      const feedback = document.getElementById("usernameFeedback");
+      let username = usernameInput.value.toLowerCase();
 
-    function cropImage() {
-      if (cropper) {
-        const canvas = cropper.getCroppedCanvas({ width: 200, height: 200 });
-        const croppedImageURL = canvas.toDataURL('image/jpeg');
-        preview.src = croppedImageURL;
-        cropContainer.style.display = 'none';
-        cropper.destroy();
+      // Filter valid characters (letters, numbers, _, ., emoji)
+      const validUsername = username.replace(/[^a-z0-9_.\p{Emoji}]/gu, "");
+      if (username !== validUsername) {
+        usernameInput.value = validUsername;
+      }
+
+      if (username.length < 3 || username.length > 30) {
+        feedback.textContent = "Username must be 3–30 characters.";
+        return;
+      }
+
+      // Simulated check (replace with Firestore check)
+      const taken = ["rafyrayyan", "admin"];
+      if (taken.includes(username)) {
+        feedback.textContent = "Username is already taken.";
+      } else {
+        feedback.textContent = "✅ Username is available.";
+        feedback.style.color = "green";
       }
     }
 
     function addLinkField() {
-      const currentLinks = document.querySelectorAll('.link-input').length;
-      if (currentLinks >= 5) return alert("Max 5 links allowed.");
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'link-input';
-      wrapper.innerHTML = `
+      const links = document.getElementById("links");
+      const total = links.querySelectorAll(".link-pair").length;
+      if (total >= 5) return;
+      const div = document.createElement("div");
+      div.classList.add("link-pair");
+      div.innerHTML = `
         <input type="text" placeholder="Link Title" class="link-title" />
         <input type="url" placeholder="https://example.com" class="link-url" />
       `;
-      linksContainer.appendChild(wrapper);
+      links.appendChild(div);
     }
 
-    bio.addEventListener('input', () => {
-      bioCounter.textContent = `${bio.value.length} / 200`;
-    });
+    function saveChanges() {
+      alert("Changes saved!");
+      window.location.href = "profile.html";
+    }
 
-    usernameInput.addEventListener('input', () => {
-      const val = usernameInput.value;
-      const isValid = /^[a-z0-9._\u{1F300}-\u{1F6FF}]{3,30}$/u.test(val);
-
-      if (!isValid) {
-        usernameError.textContent = 'Username must be 3-30 characters, lowercase, no spaces, only . _ or emoji';
-        return;
-      }
-      // Simulasi cek username (di real case pakai Firestore)
-      if (val === "rafy.rayyan") {
-        usernameError.textContent = 'Username already taken';
-      } else {
-        usernameError.textContent = '';
-      }
-    });
+    function logout() {
+      alert("Logging out...");
+    }
   </script>
 </body>
 </html>
