@@ -67,13 +67,15 @@
       apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
       authDomain: "simplesocialmedia-4f908.firebaseapp.com",
       projectId: "simplesocialmedia-4f908",
-      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      storageBucket: "",
       messagingSenderId: "770461702761",
       appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
+
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYqFIGdHQAVZFA6NTfSYA9IXfx3NIJS2xTm0FGwckDpMTr-31j2u--mlOmEcrkjR9Fsw/exec";
 
     let currentUser = null;
     auth.onAuthStateChanged(user => {
@@ -136,50 +138,6 @@
       alert("Image cropped!");
     }
 
-    function saveChanges() {
-      if (!currentUser) return alert("Not signed in");
-      const username = document.getElementById('username').value.trim();
-      const fullname = document.getElementById('fullname').value;
-      const bio = document.getElementById('bio').value;
-      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
-        title: group.querySelector('.link-title').value,
-        url: group.querySelector('.link-url').value
-      }));
-
-      const saveData = (photoURL = "") => {
-        db.collection("users").doc(currentUser.uid).set({
-          username, fullname, bio, links, photoURL
-        }, { merge: true }).then(() => {
-          alert("Changes saved! Redirecting to profile...");
-          window.location.href = "./profile.html";
-        });
-      };
-
-      if (croppedBlob) {
-        const formData = new FormData();
-        formData.append("file", croppedBlob, `${currentUser.uid}.png`);
-        fetch("https://script.google.com/macros/s/AKfycbzYqFIGdHQAVZFA6NTfSYA9IXfx3NIJS2xTm0FGwckDpMTr-31j2u--mlOmEcrkjR9Fsw/exec", {
-          method: "POST",
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success && data.url) {
-            saveData(data.url);
-          } else {
-            alert("Upload failed.");
-          }
-        })
-        .catch(err => alert("Upload error: " + err));
-      } else {
-        saveData();
-      }
-    }
-
-    function goBack() {
-      window.location.href = "./profile.html";
-    }
-
     const usernameInput = document.getElementById('username');
     usernameInput.addEventListener('input', () => {
       const value = usernameInput.value.trim();
@@ -218,6 +176,60 @@
       div.className = 'link-group';
       div.innerHTML = `<input class="link-title" placeholder="Link Title"> <input class="link-url" placeholder="https://example.com">`;
       document.getElementById('linkList').appendChild(div);
+    }
+
+    function saveChanges() {
+      if (!currentUser) return alert("Not signed in");
+      const username = document.getElementById('username').value.trim();
+      const fullname = document.getElementById('fullname').value;
+      const bio = document.getElementById('bio').value;
+      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
+        title: group.querySelector('.link-title').value,
+        url: group.querySelector('.link-url').value
+      }));
+
+      const saveData = (photoURL = "") => {
+        db.collection("users").doc(currentUser.uid).set({
+          username, fullname, bio, links, photoURL
+        }, { merge: true }).then(() => {
+          alert("Changes saved! Redirecting to profile...");
+          window.location.href = "./profile.html";
+        });
+      };
+
+      if (croppedBlob) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const base64Data = reader.result.split(',')[1];
+          fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              file: base64Data,
+              mimeType: "image/png",
+              filename: `${currentUser.uid}.png`
+            })
+          })
+          .then(res => res.json())
+          .then(result => {
+            if (result.status === "success") {
+              saveData(result.url);
+            } else {
+              alert("Upload failed: " + result.message);
+            }
+          })
+          .catch(err => {
+            alert("Upload error: " + err);
+          });
+        };
+        reader.readAsDataURL(croppedBlob);
+      } else {
+        saveData();
+      }
+    }
+
+    function goBack() {
+      window.location.href = "./profile.html";
     }
   </script>
 </body>
