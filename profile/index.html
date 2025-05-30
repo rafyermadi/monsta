@@ -8,7 +8,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
   <style>
     body { font-family: sans-serif; background: #f9f9f9; padding: 20px; }
     .container { max-width: 500px; margin: auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
@@ -75,7 +74,6 @@
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    const storage = firebase.storage();
 
     let currentUser = null;
     auth.onAuthStateChanged(user => {
@@ -138,6 +136,50 @@
       alert("Image cropped!");
     }
 
+    function saveChanges() {
+      if (!currentUser) return alert("Not signed in");
+      const username = document.getElementById('username').value.trim();
+      const fullname = document.getElementById('fullname').value;
+      const bio = document.getElementById('bio').value;
+      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
+        title: group.querySelector('.link-title').value,
+        url: group.querySelector('.link-url').value
+      }));
+
+      const saveData = (photoURL = "") => {
+        db.collection("users").doc(currentUser.uid).set({
+          username, fullname, bio, links, photoURL
+        }, { merge: true }).then(() => {
+          alert("Changes saved! Redirecting to profile...");
+          window.location.href = "./profile.html";
+        });
+      };
+
+      if (croppedBlob) {
+        const formData = new FormData();
+        formData.append("file", croppedBlob, `${currentUser.uid}.png`);
+        fetch("https://script.google.com/macros/s/AKfycbzYqFIGdHQAVZFA6NTfSYA9IXfx3NIJS2xTm0FGwckDpMTr-31j2u--mlOmEcrkjR9Fsw/exec", {
+          method: "POST",
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.url) {
+            saveData(data.url);
+          } else {
+            alert("Upload failed.");
+          }
+        })
+        .catch(err => alert("Upload error: " + err));
+      } else {
+        saveData();
+      }
+    }
+
+    function goBack() {
+      window.location.href = "./profile.html";
+    }
+
     const usernameInput = document.getElementById('username');
     usernameInput.addEventListener('input', () => {
       const value = usernameInput.value.trim();
@@ -176,37 +218,6 @@
       div.className = 'link-group';
       div.innerHTML = `<input class="link-title" placeholder="Link Title"> <input class="link-url" placeholder="https://example.com">`;
       document.getElementById('linkList').appendChild(div);
-    }
-
-    function saveChanges() {
-      if (!currentUser) return alert("Not signed in");
-      const username = document.getElementById('username').value.trim();
-      const fullname = document.getElementById('fullname').value;
-      const bio = document.getElementById('bio').value;
-      const links = Array.from(document.querySelectorAll('.link-group')).map(group => ({
-        title: group.querySelector('.link-title').value,
-        url: group.querySelector('.link-url').value
-      }));
-
-      const saveData = (photoURL = "") => {
-        db.collection("users").doc(currentUser.uid).set({
-          username, fullname, bio, links, photoURL
-        }, { merge: true }).then(() => {
-          alert("Changes saved! Redirecting to profile...");
-          window.location.href = "./profile.html";
-        });
-      };
-
-      if (croppedBlob) {
-        const ref = storage.ref().child(`avatars/${currentUser.uid}.png`);
-        ref.put(croppedBlob).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveData(url));
-      } else {
-        saveData();
-      }
-    }
-
-    function goBack() {
-      window.location.href = "./profile.html";
     }
   </script>
 </body>
