@@ -3,72 +3,69 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Monsta Profile</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css" />
+  <title>Edit Profile</title>
   <style>
     body {
       font-family: sans-serif;
-      background-color: #f7f7f7;
+      background: #f9f9f9;
       margin: 0;
+      padding: 0;
     }
     header {
-      background-color: #fff;
+      background: #fff;
       padding: 1rem 2rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .container {
       max-width: 500px;
-      margin: 2rem auto;
-      background: white;
+      margin: 3rem auto;
+      background: #fff;
       padding: 2rem;
       border-radius: 10px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
       text-align: center;
     }
-    .profile-pic {
-      width: 100px;
-      height: 100px;
-      object-fit: cover;
-      border-radius: 50%;
-      margin: 0 auto 10px;
-    }
-    input, textarea, button {
+    input, textarea {
       width: 100%;
-      margin: 0.5rem 0;
       padding: 0.75rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .error {
+      color: red;
+      font-size: 0.8rem;
+      margin-top: -0.5rem;
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+    .counter {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: -0.5rem;
+    }
+    button {
+      padding: 0.75rem 2rem;
+      margin: 1rem;
+      border: none;
+      border-radius: 5px;
+      background: #007bff;
+      color: #fff;
       font-size: 1rem;
+      cursor: pointer;
+    }
+    button.cancel {
+      background: #ccc;
+      color: #333;
     }
     footer {
       text-align: center;
-      font-size: 0.85rem;
-      margin: 2rem 0;
-      color: #555;
-    }
-    #cropperModal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.7);
-      justify-content: center;
-      align-items: center;
-    }
-    #cropperModal.show {
-      display: flex;
-    }
-    #cropperModal img {
-      max-width: 80vw;
-      max-height: 80vh;
-    }
-    .actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
+      font-size: 0.8rem;
+      margin-top: 3rem;
     }
   </style>
 </head>
@@ -79,30 +76,27 @@
   </header>
 
   <div class="container">
-    <img id="profilePreview" class="profile-pic" src="" alt="Profile Picture" />
-    <input type="file" id="fileInput" accept="image/*">
-    <input type="text" id="username" placeholder="Username" maxlength="30">
-    <input type="text" id="fullname" placeholder="Full Name" maxlength="30">
-    <textarea id="bio" rows="4" maxlength="200" placeholder="Bio"></textarea>
-    <input type="text" id="link" placeholder="Link (e.g. https://...)" />
-    <div class="actions">
-      <button onclick="saveChanges()">Save Changes</button>
-      <button onclick="cancelEdit()">Cancel</button>
-    </div>
-    <div style="margin-top:1rem; display:flex; justify-content:space-around;">
-      <div><strong>0</strong><br />Posts</div>
-      <div><strong>0</strong><br />Followers</div>
-      <div><strong>0</strong><br />Following</div>
-    </div>
-  </div>
+    <img id="profilePreview" src="" alt="Profile Picture" style="width:100px;height:100px;border-radius:50%;object-fit:cover;" />
+    <input type="file" id="profilePic" accept="image/*" />
 
-  <div id="cropperModal">
-    <div>
-      <img id="cropperImage" />
-      <div style="text-align:center; margin-top:1rem;">
-        <button onclick="applyCrop()">Apply</button>
-        <button onclick="closeCropper()">Cancel</button>
-      </div>
+    <input type="text" id="username" placeholder="Username" />
+    <div id="usernameError" class="error"></div>
+
+    <input type="text" id="fullname" placeholder="Full Name" maxlength="30" />
+
+    <textarea id="bio" placeholder="Bio" maxlength="200"></textarea>
+    <div class="counter"><span id="bioCount">0</span>/200</div>
+
+    <div id="linksContainer"></div>
+    <button onclick="addLinkField()">Add Link</button>
+
+    <button onclick="saveChanges()">Save Changes</button>
+    <button class="cancel" onclick="location.href='profile.html'">Cancel</button>
+
+    <div style="margin-top:1rem;display:flex;justify-content:space-around;">
+      <div><b id="postCount">0</b><br>Posts</div>
+      <div><b id="followerCount">0</b><br>Followers</div>
+      <div><b id="followingCount">0</b><br>Following</div>
     </div>
   </div>
 
@@ -110,52 +104,70 @@
     Made with ❤️ by <a href="https://www.instagram.com/rafy.rayyan/" target="_blank">Rafy Rayyan</a>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
-  <script>
-    let cropper;
-    const fileInput = document.getElementById("fileInput");
-    const cropperModal = document.getElementById("cropperModal");
-    const cropperImage = document.getElementById("cropperImage");
-    const profilePreview = document.getElementById("profilePreview");
+  <script type="module">
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
 
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        cropperImage.src = reader.result;
-        cropperModal.classList.add("show");
-        cropper = new Cropper(cropperImage, {
-          aspectRatio: 1,
-          viewMode: 1,
-        });
-      };
-      reader.readAsDataURL(file);
+    const firebaseConfig = {
+      apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
+      authDomain: "simplesocialmedia-4f908.firebaseapp.com",
+      projectId: "simplesocialmedia-4f908",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
+      messagingSenderId: "770461702761",
+      appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    const bio = document.getElementById("bio");
+    const bioCount = document.getElementById("bioCount");
+    const usernameInput = document.getElementById("username");
+    const usernameError = document.getElementById("usernameError");
+
+    bio.addEventListener("input", () => {
+      bioCount.textContent = bio.value.length;
     });
 
-    function applyCrop() {
-      const canvas = cropper.getCroppedCanvas({ width: 200, height: 200 });
-      profilePreview.src = canvas.toDataURL();
-      cropper.destroy();
-      cropperModal.classList.remove("show");
-    }
+    usernameInput.addEventListener("input", async () => {
+      const value = usernameInput.value.toLowerCase();
+      if (!/^[a-z0-9._\u{1F300}-\u{1FAFF}]{3,30}$/u.test(value)) {
+        usernameError.textContent = "Username must be 3-30 lowercase characters (a-z, 0-9, ., _, emoji)";
+        return;
+      }
+      const q = query(collection(db, "users"), where("username", "==", value));
+      const snapshot = await getDocs(q);
+      usernameError.textContent = snapshot.empty ? "Username available" : "Username already taken";
+      usernameError.style.color = snapshot.empty ? "green" : "red";
+    });
 
-    function closeCropper() {
-      cropper.destroy();
-      cropperModal.classList.remove("show");
+    document.getElementById("profilePic").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          document.getElementById("profilePreview").src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function addLinkField() {
+      const container = document.getElementById("linksContainer");
+      if (container.children.length >= 5) return;
+      const wrapper = document.createElement("div");
+      wrapper.innerHTML = `<input placeholder='Link Title' required/><input placeholder='https://...' required/>`;
+      container.appendChild(wrapper);
     }
 
     function saveChanges() {
-      alert("Changes saved! (functionality not yet implemented)");
-      window.location.href = "profile.html"; // redirect ke halaman profil setelah simpan
-    }
-
-    function cancelEdit() {
-      window.location.href = "profile.html";
+      alert("Saving changes... (Fitur penyimpanan akan terhubung Firebase)");
+      location.href = "profile.html";
     }
 
     function logout() {
-      alert("Logout triggered (functionality not yet implemented)");
+      signOut(auth).then(() => location.href = "index.html");
     }
   </script>
 </body>
