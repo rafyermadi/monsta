@@ -34,7 +34,6 @@
     <div class="username-valid" id="usernameStatus"></div>
 
     <input id="fullname" placeholder="Full Name (max 30 characters)" maxlength="30">
-
     <textarea id="bio" placeholder="Bio (max 200 characters)" maxlength="200"></textarea>
     <div style="text-align:right; font-size: 0.9rem;" id="bioCount">0 / 200</div>
 
@@ -67,7 +66,7 @@
       apiKey: "AIzaSyB9nuX1KSXsTnmswrrYUjZmhd3JRo9ttng",
       authDomain: "simplesocialmedia-4f908.firebaseapp.com",
       projectId: "simplesocialmedia-4f908",
-      storageBucket: "",
+      storageBucket: "simplesocialmedia-4f908.appspot.com",
       messagingSenderId: "770461702761",
       appId: "1:770461702761:web:eaf6f8d36e2e2c5ab220f8"
     };
@@ -75,9 +74,10 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYqFIGdHQAVZFA6NTfSYA9IXfx3NIJS2xTm0FGwckDpMTr-31j2u--mlOmEcrkjR9Fsw/exec";
-
     let currentUser = null;
+    let croppedBlob = null;
+    let uploadedPhotoURL = "";
+
     auth.onAuthStateChanged(user => {
       if (!user) return;
       currentUser = user;
@@ -98,17 +98,19 @@
               container.appendChild(div);
             });
           }
-          if (data.photoURL) document.getElementById('profilePreview').src = data.photoURL;
+          if (data.photoURL) {
+            document.getElementById('profilePreview').src = data.photoURL;
+            uploadedPhotoURL = data.photoURL;
+          }
         }
       });
     });
 
-    let cropper;
     const profileImage = document.getElementById('profileImage');
     const cropImage = document.getElementById('cropImage');
     const cropModal = document.getElementById('cropModal');
     const profilePreview = document.getElementById('profilePreview');
-    let croppedBlob = null;
+    let cropper;
 
     profileImage.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -118,11 +120,7 @@
           cropImage.src = reader.result;
           cropModal.classList.add('active');
           if (cropper) cropper.destroy();
-          cropper = new Cropper(cropImage, {
-            aspectRatio: 1,
-            viewMode: 1,
-            background: false,
-          });
+          cropper = new Cropper(cropImage, { aspectRatio: 1, viewMode: 1, background: false });
         }
         reader.readAsDataURL(file);
       }
@@ -135,38 +133,10 @@
         profilePreview.src = URL.createObjectURL(blob);
       }, 'image/png');
       cropModal.classList.remove('active');
-      alert("Image cropped!");
     }
 
-    const usernameInput = document.getElementById('username');
-    usernameInput.addEventListener('input', () => {
-      const value = usernameInput.value.trim();
-      const status = document.getElementById('usernameStatus');
-      const regex = /^[a-z0-9_.\p{Emoji}]{3,30}$/u;
-      if (!regex.test(value)) {
-        status.textContent = "Invalid username format.";
-        status.style.color = "red";
-      } else {
-        status.textContent = "Checking availability...";
-        status.style.color = "#888";
-        setTimeout(() => {
-          db.collection("users").where("username", "==", value).get().then(snapshot => {
-            if (!snapshot.empty && snapshot.docs[0].id !== currentUser?.uid) {
-              status.textContent = "Username already taken.";
-              status.style.color = "red";
-            } else {
-              status.textContent = "Username is available.";
-              status.style.color = "green";
-            }
-          });
-        }, 300);
-      }
-    });
-
-    const bio = document.getElementById('bio');
-    const bioCount = document.getElementById('bioCount');
-    bio.addEventListener('input', () => {
-      bioCount.textContent = `${bio.value.length} / 200`;
+    document.getElementById('bio').addEventListener('input', (e) => {
+      document.getElementById('bioCount').textContent = `${e.target.value.length} / 200`;
     });
 
     function addLink() {
@@ -188,7 +158,7 @@
         url: group.querySelector('.link-url').value
       }));
 
-      const saveData = (photoURL = "") => {
+      const saveToFirestore = (photoURL = uploadedPhotoURL) => {
         db.collection("users").doc(currentUser.uid).set({
           username, fullname, bio, links, photoURL
         }, { merge: true }).then(() => {
@@ -199,32 +169,29 @@
 
       if (croppedBlob) {
         const reader = new FileReader();
-        reader.onload = function () {
-          const base64Data = reader.result.split(',')[1];
-          fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        reader.onloadend = () => {
+          const base64data = reader.result.split(',')[1];
+          fetch('https://script.google.com/macros/s/AKfycbzYqFIGdHQAVZFA6NTfSYA9IXfx3NIJS2xTm0FGwckDpMTr-31j2u--mlOmEcrkjR9Fsw/exec', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
-              file: base64Data,
-              mimeType: "image/png",
-              filename: `${currentUser.uid}.png`
+              file: base64data,
+              filename: `${currentUser.uid}.png`,
+              mimeType: 'image/png'
             })
-          })
-          .then(res => res.json())
-          .then(result => {
-            if (result.status === "success") {
-              saveData(result.url);
+          }).then(res => res.json()).then(data => {
+            if (data.status === 'success') {
+              saveToFirestore(data.url);
             } else {
-              alert("Upload failed: " + result.message);
+              alert("Upload error: " + data.message);
             }
-          })
-          .catch(err => {
+          }).catch(err => {
             alert("Upload error: " + err);
           });
         };
         reader.readAsDataURL(croppedBlob);
       } else {
-        saveData();
+        saveToFirestore();
       }
     }
 
